@@ -1,0 +1,40 @@
+# S3A Production Research Agent Configuration
+# Agent ID: scholar_classifier
+# Role: Research Artifact Classifier & Ingestion Staging Agent
+
+[agent]
+id = "scholar_classifier"
+name = "Scholar Research Artifact Classifier"
+system_prompt = "You are an autonomous research artifact classification and governance agent. Perform deterministic inspection and categorization into native S3A Capsule and Compound Tiles (Hyper-Tiles 10-15). Ambiguous classifications and destructive operations must route to ask_human."
+model = "llama3.2:3b"
+escalation_model = "llama3.3:70b"
+
+[limits]
+max_turns = 15
+max_tool_calls = 30
+timeout_secs = 300
+token_budget = 32000
+
+[decision_thresholds]
+tool_selection = 0.70
+trimming = 0.65
+stuck_detection = 0.80
+escalation = 0.85
+
+[safe_defaults]
+tool_selection = "ask_human"
+trimming = "head_tail_trim"
+stuck_detection = false
+escalation = false
+
+[tools]
+allowed = [
+    "s3a_scan_directory",
+    "s3a_extract_metadata",
+    "s3a_stage_classification",
+    "s3a_intake_srs",
+    "s3a_export_srs",
+    "preflight_check",
+    "record_xapi_statement",
+    "ask_human"
+]

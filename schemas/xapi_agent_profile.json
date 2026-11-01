@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://w3id.org/xapi/s3a-scholar/v1/profile.json",
+  "title": "S3AScholarAgentXapiProfile",
+  "description": "xAPI 1.0.3 Task Execution Contract and Job Manual profile for S3A autonomous agents",
+  "type": "object",
+  "required": ["id", "type", "conformsTo", "prefLabel", "definition", "versions"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "const": "https://w3id.org/xapi/s3a-scholar/v1"
+    },
+    "type": {
+      "type": "string",
+      "const": "Profile"
+    },
+    "conformsTo": {
+      "type": "string",
+      "const": "https://w3id.org/xapi/profiles#1.0"
+    },
+    "prefLabel": {
+      "type": "object",
+      "properties": { "en": { "type": "string" } },
+      "required": ["en"]
+    },
+    "definition": {
+      "type": "object",
+      "properties": { "en": { "type": "string" } },
+      "required": ["en"]
+    },
+    "versions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "generatedAtTime"],
+        "properties": {
+          "id": { "type": "string" },
+          "generatedAtTime": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "concepts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "prefLabel", "definition"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string", "enum": ["Verb", "ActivityType", "Extension"] },
+          "prefLabel": { "type": "object" },
+          "definition": { "type": "object" }
+        }
+      }
+    }
+  },
+  "prefLabel": {
+    "en": "S3A Scholar Agent Job Manual Profile"
+  },
+  "definition": {
+    "en": "Restricts autonomous agents in S3A to verifiable and auditable research artifact processing operations."
+  },
+  "versions": [
+    {
+      "id": "https://w3id.org/xapi/s3a-scholar/v1.0.0",
+      "generatedAtTime": "2026-11-01T00:00:00Z"
+    }
+  ],
+  "concepts": [
+    {
+      "id": "http://adlnet.gov/expapi/verbs/scanned",
+      "type": "Verb",
+      "prefLabel": { "en": "scanned" },
+      "definition": { "en": "Agent examined an artifact or directory on the filesystem." }
+    },
+    {
+      "id": "https://w3id.org/xapi/s3a/verbs/extracted",
+      "type": "Verb",
+      "prefLabel": { "en": "extracted" },
+      "definition": { "en": "Agent parsed text, geometry, or bibliographic metadata from an artifact." }
+    },
+    {
+      "id": "https://w3id.org/xapi/s3a/verbs/classified",
+      "type": "Verb",
+      "prefLabel": { "en": "classified" },
+      "definition": { "en": "Agent assigned a taxonomy class to an artifact with a confidence score." }
+    },
+    {
+      "id": "https://w3id.org/xapi/s3a/verbs/flagged_needs_review",
+      "type": "Verb",
+      "prefLabel": { "en": "flagged_needs_review" },
+      "definition": { "en": "Agent routed an ambiguous artifact to the human supervisory gate." }
+    },
+    {
+      "id": "https://w3id.org/xapi/s3a/verbs/overrode",
+      "type": "Verb",
+      "prefLabel": { "en": "overrode" },
+      "definition": { "en": "Human researcher asserted an authoritative classification correction." }
+    },
+    {
+      "id": "https://w3id.org/xapi/s3a/verbs/verified",
+      "type": "Verb",
+      "prefLabel": { "en": "verified" },
+      "definition": { "en": "Human researcher or supervisor confirmed an agent classification." }
+    },
+    {
+      "id": "https://w3id.org/xapi/s3a/verbs/ingested",
+      "type": "Verb",
+      "prefLabel": { "en": "ingested" },
+      "definition": { "en": "Agent or system committed artifact records into native S3A Hyper-Tiles." }
+    }
+  ]
+}

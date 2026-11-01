@@ -1,0 +1,67 @@
+version: "1.0.0"
+classes:
+  SourcePackage:
+    display_name: "Source Package"
+    description: "Multi-file compound submission archive or project bundle (LaTeX sources, figures, macros)"
+    s3a_tile_type: "CompoundTile"
+    rules:
+      extensions: [".tar.gz", ".tgz", ".zip"]
+      contains_root_manifest: true
+      root_manuscript_names: ["main.tex", "ms.tex", "paper.tex", "index.html", "manuscript.md"]
+      sub_asset_directories: ["figures", "images", "figs", "plots", "macros", "data"]
+
+  ConferencePoster:
+    display_name: "Conference Poster"
+    description: "Single-sheet large-format visual presentation for academic conferences"
+    s3a_tile_type: "CapsuleTile"
+    rules:
+      extensions: [".pdf"]
+      max_pages: 1
+      min_dimension_in: 24.0
+      min_dimension_mm: 610.0
+
+  ConferencePresentation:
+    display_name: "Conference Presentation"
+    description: "Slide deck for conference talks or seminar lectures"
+    s3a_tile_type: "CapsuleTile"
+    rules:
+      extensions: [".pdf", ".pptx", ".ppt", ".key"]
+      min_pages: 3
+      aspect_ratios: ["16:9", "4:3", "16:10"]
+
+  AcademicPaper:
+    display_name: "Academic Paper"
+    description: "Formal scholarly publication or peer-reviewed literature"
+    s3a_tile_type: "CapsuleTile"
+    rules:
+      extensions: [".pdf", ".html", ".htm"]
+      require_doi_or_publisher: true
+      recognized_meta_tags:
+        - "citation_title"
+        - "citation_doi"
+        - "dc.identifier"
+      disallow_active_local_source: true
+
+  AuthorDraft:
+    display_name: "Author Draft"
+    description: "In-progress manuscript authored by the local researcher"
+    s3a_tile_type: "CapsuleTile"
+    rules:
+      extensions: [".pdf", ".docx", ".tex", ".md"]
+      matches_user_identity: true
+      has_active_source_or_recent_edits: true
+      draft_cues:
+        - "draft"
+        - "preliminary"
+        - "to appear"
+        - "under review"
+        - "confidential"
+
+  ResearchNote:
+    display_name: "Research Note"
+    description: "Informal research memorandum, literature summary, or lab log"
+    s3a_tile_type: "CapsuleTile"
+    rules:
+      extensions: [".md", ".txt", ".org", ".pdf"]
+      max_pages: 5
+      lacks_formal_abstract_or_references: true

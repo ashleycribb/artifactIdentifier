@@ -1,0 +1,23 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# Testing & caches
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Local S3A workspace metadata & runtime databases
+.s3a/metadata/
+.s3a/staging/
+.s3a/audit_log.jsonl
+*.s3a
+*.s3a.simulated.json

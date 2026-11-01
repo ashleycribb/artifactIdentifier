@@ -1,0 +1,97 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="https://s3a.storage/ontology/governance#"
+     xml:base="https://s3a.storage/ontology/governance"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:s3a="https://s3a.storage/ontology/governance#">
+    <owl:Ontology rdf:about="https://s3a.storage/ontology/governance">
+        <rdfs:label>S3A Agent Job Duties &amp; Governance Ontology</rdfs:label>
+        <rdfs:comment>Defines formal role boundaries, permitted capabilities, and forbidden actions for autonomous agents operating in S3A environments.</rdfs:comment>
+        <owl:versionInfo>1.0.0</owl:versionInfo>
+    </owl:Ontology>
+
+    <!-- Classes -->
+    <owl:Class rdf:about="#AgentRole">
+        <rdfs:label>Agent Role</rdfs:label>
+        <rdfs:comment>Base class for all functional agent roles in S3A.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#ClassifierAgent">
+        <rdfs:subClassOf rdf:resource="#AgentRole"/>
+        <rdfs:label>Classifier Agent</rdfs:label>
+        <rdfs:comment>Autonomous agent responsible for document inspection, classification, and staging.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#SupervisoryAgent">
+        <rdfs:subClassOf rdf:resource="#AgentRole"/>
+        <rdfs:label>Supervisory Agent</rdfs:label>
+        <rdfs:comment>Human-in-the-loop supervisor with override and decision-grant authority.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#IngestionAgent">
+        <rdfs:subClassOf rdf:resource="#AgentRole"/>
+        <rdfs:label>Ingestion Agent</rdfs:label>
+        <rdfs:comment>Agent responsible for committing staged artifacts to Hyper-Tiles in S3A storage.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#TaskCapability">
+        <rdfs:label>Task Capability</rdfs:label>
+        <rdfs:comment>Specific operational capability grantable to an agent.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#ArtifactClass">
+        <rdfs:label>Artifact Class</rdfs:label>
+        <rdfs:comment>Target classification class for research artifacts.</rdfs:comment>
+    </owl:Class>
+
+    <!-- Capabilities -->
+    <s3a:TaskCapability rdf:about="#CapabilityScanDirectory"/>
+    <s3a:TaskCapability rdf:about="#CapabilityExtractMetadata"/>
+    <s3a:TaskCapability rdf:about="#CapabilityStageManifest"/>
+    <s3a:TaskCapability rdf:about="#CapabilityIntakeSrs"/>
+    <s3a:TaskCapability rdf:about="#CapabilityExportSrs"/>
+    <s3a:TaskCapability rdf:about="#CapabilityPreflightCheck"/>
+    <s3a:TaskCapability rdf:about="#CapabilityRecordXapi"/>
+    <s3a:TaskCapability rdf:about="#CapabilityAskHuman"/>
+    <s3a:TaskCapability rdf:about="#CapabilityCommitS3a"/>
+    <s3a:TaskCapability rdf:about="#CapabilityPhysicalFileMove"/>
+    <s3a:TaskCapability rdf:about="#CapabilityPhysicalFileDelete"/>
+
+    <!-- Properties -->
+    <owl:ObjectProperty rdf:about="#hasPermission">
+        <rdfs:domain rdf:resource="#AgentRole"/>
+        <rdfs:range rdf:resource="#TaskCapability"/>
+        <rdfs:label>has permission</rdfs:label>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#prohibitsAction">
+        <rdfs:domain rdf:resource="#AgentRole"/>
+        <rdfs:range rdf:resource="#TaskCapability"/>
+        <rdfs:label>prohibits action</rdfs:label>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#requiresGate">
+        <rdfs:domain rdf:resource="#AgentRole"/>
+        <rdfs:range rdf:resource="#TaskCapability"/>
+        <rdfs:label>requires human supervisory gate</rdfs:label>
+    </owl:ObjectProperty>
+
+    <!-- Role Axioms for ClassifierAgent -->
+    <rdf:Description rdf:about="#ClassifierAgent">
+        <hasPermission rdf:resource="#CapabilityScanDirectory"/>
+        <hasPermission rdf:resource="#CapabilityExtractMetadata"/>
+        <hasPermission rdf:resource="#CapabilityStageManifest"/>
+        <hasPermission rdf:resource="#CapabilityIntakeSrs"/>
+        <hasPermission rdf:resource="#CapabilityExportSrs"/>
+        <hasPermission rdf:resource="#CapabilityPreflightCheck"/>
+        <hasPermission rdf:resource="#CapabilityRecordXapi"/>
+        <hasPermission rdf:resource="#CapabilityAskHuman"/>
+        <prohibitsAction rdf:resource="#CapabilityPhysicalFileMove"/>
+        <prohibitsAction rdf:resource="#CapabilityPhysicalFileDelete"/>
+        <requiresGate rdf:resource="#CapabilityCommitS3a"/>
+    </rdf:Description>
+
+</rdf:RDF>
