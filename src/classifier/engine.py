@@ -299,11 +299,20 @@ class ClassificationEngine:
                 "byte_size": byte_size,
                 "last_scanned": last_scanned,
             },
+            # The agent only SUGGESTS a class. It becomes final only after a human
+            # runs `s3a-agent confirm` or `s3a-agent override`.
             "classification": {
-                "class": assigned_class,
+                "suggested_class": assigned_class,
                 "confidence": round(confidence, 2),
                 "source": source,
                 "rationale": rationale,
+            },
+            "confirmation": {
+                "status": "unconfirmed",
+                "final_class": None,
+                "confirmed_by": None,
+                "confirmed_at": None,
+                "notes": None,
             },
             "human_override": {
                 "active": False,

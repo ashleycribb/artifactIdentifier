@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import struct
@@ -14,6 +15,12 @@ import uuid
 
 from src.catalog.manager import CatalogManager
 from src.config import S3AConfig
+from src.s3a.tile_ids import (
+    TILE_AI_TRACE_LOG,
+    TILE_HUMAN_LRS,
+    VERB_ID_APPROVED,
+    VERB_ID_OVERRODE,
+)
 
 
 def str_hash64(s: str) -> int:
@@ -97,7 +104,9 @@ class S3ABridge:
             for idx, m in enumerate(manifests):
                 fp = m.get("fingerprint", {})
                 cls_data = m.get("classification", {})
-                override = m.get("human_override", {})
+                decision = m.get("confirmation", {})
+                human_decided = decision.get("status") in ("confirmed", "overridden")
+                final_class = decision.get("final_class") if human_decided else None
                 attrs = m.get("attributes", {})
 
                 sha256 = fp.get("sha256", "")
@@ -116,31 +125,33 @@ class S3ABridge:
                     "topic_z": float(year),
                     "citation_count": 0,
                     "year": year,
-                    "venue_id": str_hash64(cls_data.get("class", "Literature")) % 100,
-                    "open_access_flag": 1 if cls_data.get("class") == "AcademicPaper" else 0,
-                    "warning_count": 1 if cls_data.get("class") == "NeedsReview" else 0,
+                    # Class-derived fields use only the human's final class, never the agent's suggestion.
+                    "venue_id": str_hash64(final_class or "Literature") % 100,
+                    "open_access_flag": 1 if final_class == "AcademicPaper" else 0,
+                    # Warn while no human has decided, or the final class is NeedsReview
+                    "warning_count": 1 if (not human_decided or final_class == "NeedsReview") else 0,
                     "doi_prefix_hash": str_hash64(doi.split("/")[0] if doi and "/" in doi else "10.0000"),
                 }
                 f_papers.write(json.dumps(paper_rec) + "\n")
                 papers_count += 1
 
-                # Tile 10: HumanLrsRecord
-                if override.get("active"):
+                # Tile 10: HumanLrsRecord - written only for human decisions (confirm / override)
+                if human_decided:
                     lrs_rec = {
                         "session_high": high,
                         "session_low": low,
                         "timestamp_sec": int(time.time()),
-                        "actor_hash": str_hash64(override.get("updated_by", "researcher")),
-                        "verb_id": 4,  # overrode
+                        "actor_hash": str_hash64(decision.get("confirmed_by") or "researcher"),
+                        "verb_id": VERB_ID_OVERRODE if decision["status"] == "overridden" else VERB_ID_APPROVED,
                         "decision_score": 1.0,
                         "object_hash": str_hash64(sha256),
-                        "ai_tile": 11,
+                        "ai_tile": TILE_AI_TRACE_LOG,
                         "ai_record": idx,
                     }
                     f_lrs.write(json.dumps(lrs_rec) + "\n")
                     lrs_count += 1
 
-                # Tile 11: AiTraceRecord
+                # Tile 11: AiTraceRecord - the agent's SUGGESTION trace, never a final decision
                 ai_rec = {
                     "session_high": high,
                     "session_low": low,
@@ -148,24 +159,25 @@ class S3ABridge:
                     "agent_id": str_hash64("agent:scholar-classifier"),
                     "step_type": 1,  # classify
                     "confidence": float(cls_data.get("confidence", 0.9)),
-                    "human_tile": 10 if override.get("active") else 0,
-                    "human_record": lrs_count - 1 if override.get("active") else 0,
+                    "human_tile": TILE_HUMAN_LRS if human_decided else 0,
+                    "human_record": lrs_count - 1 if human_decided else 0,
                     "hilbert_index": (high ^ low ^ paper_id) % (1 << 30),
                 }
                 f_ai.write(json.dumps(ai_rec) + "\n")
                 ai_traces_count += 1
 
-                # Tile 13: ResearchGraphEdgeRecord
-                edge_rec = {
-                    "subject_hash": str_hash64(sha256),
-                    "object_hash": str_hash64(cls_data.get("class", "Artifact")),
-                    "timestamp_sec": int(time.time()),
-                    "hilbert_coord": (str_hash64(sha256) ^ str_hash64(cls_data.get("class", "Artifact"))) % (1 << 30),
-                    "predicate_id": 1,  # classified_as
-                    "weight": float(cls_data.get("confidence", 1.0)),
-                }
-                f_edges.write(json.dumps(edge_rec) + "\n")
-                edges_count += 1
+                # Tile 13: ResearchGraphEdgeRecord - classified_as edge only for a human-final class
+                if final_class:
+                    edge_rec = {
+                        "subject_hash": str_hash64(sha256),
+                        "object_hash": str_hash64(final_class),
+                        "timestamp_sec": int(time.time()),
+                        "hilbert_coord": (str_hash64(sha256) ^ str_hash64(final_class)) % (1 << 30),
+                        "predicate_id": 1,  # classified_as
+                        "weight": 1.0,
+                    }
+                    f_edges.write(json.dumps(edge_rec) + "\n")
+                    edges_count += 1
 
         # Tile 14 / 15: Workspace metadata
         with workspace_path.open("w", encoding="utf-8") as f_ws:
@@ -198,9 +210,10 @@ class S3ABridge:
         target_s3a = Path(destination_s3a_path or self.config.s3a_database_path).resolve()
 
         # Check if s3a repo path exists
-        repo = Path(s3a_repo_path) if s3a_repo_path else Path("C:/Users/Ashley/Downloads/s3a")
+        repo_setting = s3a_repo_path or self.config.s3a_repo_path or os.environ.get("S3A_REPO")
+        repo = Path(repo_setting) if repo_setting else None
 
-        if (repo / "Cargo.toml").exists() and shutil.which("cargo"):
+        if repo is not None and (repo / "Cargo.toml").exists() and shutil.which("cargo"):
             cmd = [
                 "cargo",
                 "run",

@@ -4,7 +4,7 @@
   "title": "S3AArtifactManifest",
   "description": "Schema for S3A centralized research artifact metadata manifests",
   "type": "object",
-  "required": ["fingerprint", "classification", "human_override", "attributes"],
+  "required": ["fingerprint", "classification", "confirmation", "human_override", "attributes"],
   "additionalProperties": false,
   "properties": {
     "fingerprint": {
@@ -31,10 +31,11 @@
     },
     "classification": {
       "type": "object",
-      "required": ["class", "confidence", "source", "rationale"],
+      "description": "Agent SUGGESTION only. Not final until a human confirms or overrides (see 'confirmation').",
+      "required": ["suggested_class", "confidence", "source", "rationale"],
       "additionalProperties": false,
       "properties": {
-        "class": {
+        "suggested_class": {
           "type": "string",
           "enum": [
             "AcademicPaper",
@@ -61,6 +62,41 @@
         },
         "rationale": {
           "type": "string"
+        }
+      }
+    },
+    "confirmation": {
+      "type": "object",
+      "description": "Human decision. final_class is set only by `s3a-agent confirm` or `s3a-agent override`.",
+      "required": ["status", "final_class", "confirmed_by", "confirmed_at", "notes"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["unconfirmed", "confirmed", "overridden"]
+        },
+        "final_class": {
+          "type": ["string", "null"],
+          "enum": [
+            "AcademicPaper",
+            "AuthorDraft",
+            "ResearchNote",
+            "ConferencePoster",
+            "ConferencePresentation",
+            "SourcePackage",
+            "NeedsReview",
+            null
+          ]
+        },
+        "confirmed_by": {
+          "type": ["string", "null"]
+        },
+        "confirmed_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "notes": {
+          "type": ["string", "null"]
         }
       }
     },

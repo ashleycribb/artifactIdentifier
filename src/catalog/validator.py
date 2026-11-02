@@ -55,7 +55,7 @@ def validate_human_override(data: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
     if not is_active:
         return True, None
 
-    target_class = data.get("classification", {}).get("class")
+    target_class = data.get("confirmation", {}).get("final_class")
     if target_class not in VALID_CLASSES:
         return False, f"Target overridden class '{target_class}' is not in valid taxonomy classes: {VALID_CLASSES}"
 

@@ -15,9 +15,7 @@ build/
 coverage.xml
 htmlcov/
 
-# Local S3A workspace metadata & runtime databases
-.s3a/metadata/
-.s3a/staging/
-.s3a/audit_log.jsonl
+# Local S3A workspace metadata & runtime databases (never commit)
+.s3a/
 *.s3a
 *.s3a.simulated.json
