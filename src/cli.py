@@ -10,7 +10,7 @@ import click
 from src.catalog.manager import CatalogManager
 from src.classifier.engine import CANDIDATE_CLASSES, ClassificationEngine
 from src.config import AppConfig
-from src.governance.harness import GovernanceHarness
+from src.governance.harness import GovernanceHarness, GovernanceViolationError
 from src.s3a.bridge import S3ABridge
 
 
@@ -68,13 +68,14 @@ def scan(directory: str, allow_remote_llm: bool, author: tuple):
             continue
 
         sha256 = manifest["fingerprint"]["sha256"]
-        cls_name = manifest["classification"]["class"]
+        cls_name = manifest["classification"]["suggested_class"]
         conf = manifest["classification"]["confidence"]
 
-        # Check existing human override
+        # Preserve any existing human decision (confirm or override)
         existing = catalog.get_manifest(sha256)
-        if existing and existing.get("human_override", {}).get("active"):
-            click.echo(f"  [OVERRIDDEN] {p.name} -> {existing['classification']['class']} (Preserved human decision)")
+        if existing and existing.get("confirmation", {}).get("status") in ("confirmed", "overridden"):
+            conf_block = existing["confirmation"]
+            click.echo(f"  [{conf_block['status'].upper()}] {p.name} -> {conf_block['final_class']} (Preserved human decision)")
             continue
 
         saved_ok, err = catalog.save_manifest(manifest)
@@ -83,22 +84,24 @@ def scan(directory: str, allow_remote_llm: bool, author: tuple):
             continue
 
         classified_count += 1
-        verb = "flagged_needs_review" if cls_name == "NeedsReview" else "classified"
+        # The agent only suggests; a human makes it final with `s3a-agent confirm` / `override`.
+        verb = "flagged_needs_review" if cls_name == "NeedsReview" else "suggested"
         harness.record_step(
             verb,
             str(p),
-            context={"sha256": sha256, "class": cls_name, "confidence": conf},
+            context={"sha256": sha256, "suggested_class": cls_name, "confidence": conf},
         )
 
         color = "yellow" if cls_name == "NeedsReview" else "green"
-        click.secho(f"  [{cls_name} ({conf:.2f})] {p.name}", fg=color)
+        click.secho(f"  [suggested: {cls_name} ({conf:.2f})] {p.name}", fg=color)
 
     click.echo("-" * 60)
     click.secho(
         f"Scan complete: {scanned_count} files discovered, "
-        f"{classified_count} classified, {excluded_sub_assets} sub-assets excluded.",
+        f"{classified_count} suggested (not final), {excluded_sub_assets} sub-assets excluded.",
         fg="bright_green",
     )
+    click.echo("Review suggestions, then run: s3a-agent confirm <sha256>  (or: s3a-agent override <sha256> <class>)")
 
 
 @main.command()
@@ -115,13 +118,19 @@ def status():
     click.echo(f"Valid Files:         {integrity['valid_count']}")
     click.echo(f"Stale Files:         {integrity['stale_count']}")
     click.echo(f"Missing Files:       {integrity['missing_count']}")
+    click.echo(f"Awaiting Human:      {integrity['unconfirmed_count']} (suggestions not yet confirmed)")
+    click.echo(f"Human Confirmed:     {integrity['confirmed_count']}")
     click.echo(f"Human Overrides:     {integrity['overridden_count']}")
 
-    # Count by class
+    # Count by class: final (human-decided) class if present, else the agent's suggestion
     counts = {}
     for m in manifests:
-        c = m.get("classification", {}).get("class", "Unknown")
-        counts[c] = counts.get(c, 0) + 1
+        conf_block = m.get("confirmation", {})
+        if conf_block.get("final_class"):
+            key = conf_block["final_class"]
+        else:
+            key = f"{m.get('classification', {}).get('suggested_class', 'Unknown')} (suggested)"
+        counts[key] = counts.get(key, 0) + 1
 
     click.echo("\nArtifact Breakdown by Class:")
     for c, cnt in sorted(counts.items()):
@@ -129,6 +138,43 @@ def status():
 
     if integrity["stale_count"] > 0:
         click.secho(f"\nWarning: {integrity['stale_count']} files modified since last scan. Run 's3a-agent scan' to refresh.", fg="yellow")
+
+
+@main.command()
+@click.argument("sha256")
+@click.option("--user", default="researcher", help="Researcher username or ORCID confirming the suggestion")
+@click.option("--notes", default=None, help="Audit rationale for confirmation")
+def confirm(sha256: str, user: str, notes: Optional[str]):
+    """Confirm the agent's suggested class as final (human decision)."""
+    config = AppConfig.load()
+    catalog = CatalogManager(config.scanner.metadata_dir)
+    harness = GovernanceHarness()
+
+    manifest = catalog.get_manifest(sha256)
+    if not manifest:
+        click.secho(f"Confirm Failed: Manifest with sha256 '{sha256}' not found", fg="red")
+        sys.exit(1)
+    suggested = manifest["classification"]["suggested_class"]
+
+    try:
+        harness.require_human_actor("confirmed", True, user)
+    except GovernanceViolationError as e:
+        click.secho(f"Confirm Refused: {e}", fg="red")
+        sys.exit(1)
+
+    ok, err = catalog.confirm(sha256, user, notes)
+    if not ok:
+        click.secho(f"Confirm Failed: {err}", fg="red")
+        sys.exit(1)
+
+    harness.record_step(
+        "confirmed",
+        sha256,
+        context={"final_class": suggested, "user": user, "notes": notes},
+        actor_name=user,
+        is_human=True,
+    )
+    click.secho(f"Confirmed: {sha256} -> {suggested} (by {user})", fg="green")
 
 
 @main.command()

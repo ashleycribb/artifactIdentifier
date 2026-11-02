@@ -32,12 +32,19 @@ GATED_CAPABILITIES = {
 AUTHORIZED_XAPI_VERBS = {
     "scanned": "http://adlnet.gov/expapi/verbs/scanned",
     "extracted": "https://w3id.org/xapi/s3a/verbs/extracted",
+    "suggested": "https://w3id.org/xapi/s3a/verbs/suggested",
+    "confirmed": "https://w3id.org/xapi/s3a/verbs/confirmed",
     "classified": "https://w3id.org/xapi/s3a/verbs/classified",
     "flagged_needs_review": "https://w3id.org/xapi/s3a/verbs/flagged_needs_review",
     "overrode": "https://w3id.org/xapi/s3a/verbs/overrode",
     "verified": "https://w3id.org/xapi/s3a/verbs/verified",
     "ingested": "https://w3id.org/xapi/s3a/verbs/ingested",
 }
+
+
+# Judgments that make a class final. An agent may only "suggest"; these verbs are
+# recorded only when the actor is a human.
+HUMAN_ONLY_VERBS = {"classified", "confirmed", "overrode"}
 
 
 class GovernanceViolationError(Exception):
@@ -80,6 +87,23 @@ class GovernanceHarness:
 
         return True
 
+    def require_human_actor(self, verb_key: str, is_human: bool, actor_name: Optional[str]) -> None:
+        """Refuse human-only verbs ('classified', 'confirmed', 'overrode') unless the actor is a human.
+
+        This guards the code path; it cannot authenticate who is at the keyboard.
+        """
+        if verb_key not in HUMAN_ONLY_VERBS:
+            return
+        if not is_human:
+            raise GovernanceViolationError(
+                f"Verb '{verb_key}' makes a classification final and requires a human actor; "
+                f"agents may only record 'suggested'."
+            )
+        if actor_name is not None and actor_name.strip().lower() in {"", self.agent_id.lower()}:
+            raise GovernanceViolationError(
+                f"Verb '{verb_key}' cannot be attributed to the agent '{self.agent_id}'."
+            )
+
     def record_step(
         self,
         verb_key: str,
@@ -94,6 +118,8 @@ class GovernanceHarness:
             raise GovernanceViolationError(
                 f"Verb '{verb_key}' is not authorized under S3A Scholar xAPI profile."
             )
+
+        self.require_human_actor(verb_key, is_human, actor_name)
 
         statement_id = str(uuid.uuid4())
         timestamp = datetime.now(timezone.utc).isoformat()

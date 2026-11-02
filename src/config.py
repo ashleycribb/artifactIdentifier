@@ -36,6 +36,8 @@ class S3AConfig(BaseModel):
     addon_channel: str = "gate://s3a_edu"
     lrs_endpoint: str = "http://localhost:8080/xapi"
     s3a_database_path: str = "research_vault.s3a"
+    # Local checkout of s3a-storage used for native ingest (also read from env S3A_REPO). Unset = simulated commit.
+    s3a_repo_path: Optional[str] = None
     scholar_layout_version: int = 1
 
 

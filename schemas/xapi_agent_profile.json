@@ -79,10 +79,22 @@
       "definition": { "en": "Agent parsed text, geometry, or bibliographic metadata from an artifact." }
     },
     {
+      "id": "https://w3id.org/xapi/s3a/verbs/suggested",
+      "type": "Verb",
+      "prefLabel": { "en": "suggested" },
+      "definition": { "en": "Agent proposed a taxonomy class with a confidence score. Not final; needs human confirmation." }
+    },
+    {
+      "id": "https://w3id.org/xapi/s3a/verbs/confirmed",
+      "type": "Verb",
+      "prefLabel": { "en": "confirmed" },
+      "definition": { "en": "Human researcher accepted the agent's suggested class as final. Recorded only with a human actor." }
+    },
+    {
       "id": "https://w3id.org/xapi/s3a/verbs/classified",
       "type": "Verb",
       "prefLabel": { "en": "classified" },
-      "definition": { "en": "Agent assigned a taxonomy class to an artifact with a confidence score." }
+      "definition": { "en": "Human researcher asserted a final taxonomy class for an artifact. Recorded only with a human actor; agents use 'suggested'." }
     },
     {
       "id": "https://w3id.org/xapi/s3a/verbs/flagged_needs_review",
